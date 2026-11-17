@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Ghost Brain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --acc:#ffffff; --acc2:#9a9a9a; --acc-soft:#e2e2e2; --acc-ink:#5b5b5b;
+  --black:#0b0b0b; --ink-d:#ffffff; --ink2-d:#bdbdbd;
+  --grey:#ebebeb; --card:#ffffff; --ink-l:#121212; --ink2-l:#5b5b5b;
+  --cite:#8d8d8d; --dcard:#1c1c1c; --dline:#333;
+}
+/* the deck is always presented on black, in both themes */
+:root:not([data-theme="light"]){ color-scheme: dark; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --black:#0b0b0b; } }
+:root[data-theme="dark"]{ --black:#0b0b0b; }
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#000;height:100%;overflow:hidden}
+body{font-family:Poppins,system-ui,"Segoe UI",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+#stage{position:absolute;left:50%;top:50%;width:1280px;height:720px;transform-origin:center center;overflow:hidden}
+.slide{position:absolute;inset:0;display:none;padding:0 64px}
+.slide.active{display:block}
+.dark{background:var(--black);color:var(--ink-d)}
+.light{background:var(--grey);color:var(--ink-l)}
+.pg{position:absolute;right:28px;bottom:18px;font-size:12px;opacity:.5}
+.frag{opacity:0;transform:translateY(14px);transition:opacity .55s ease,transform .55s ease}
+.frag.on{opacity:1;transform:none}
+
+.hd{position:absolute;left:64px;right:64px;top:62px;display:flex;justify-content:space-between;align-items:baseline;gap:24px}
+.hd h2{font-size:38px;font-weight:600;line-height:1.15;letter-spacing:-.01em}
+.hd .tag{font-size:13px;color:var(--cite);white-space:nowrap}
+.dark .hd h2 em{font-style:normal;color:var(--acc)}
+.light .hd h2 em{font-style:normal;background:linear-gradient(transparent 58%,var(--acc-soft) 58%);padding:0 4px}
+.cite{font-size:12px;color:var(--cite)}
+.body{position:absolute;left:64px;right:64px;top:150px;bottom:56px}
+
+.box{border-radius:20px;padding:24px 26px}
+.light .box{background:var(--card);color:#555}
+.light .box.k{background:#111;color:#cfcfcf}
+.dark .box{background:var(--dcard);border:1px solid var(--dline);color:#cfcfcf}
+.dark .box.w{background:#fff;border:none;color:#555}
+.box h3{font-size:22px;font-weight:600;margin-bottom:10px;color:inherit}
+.light .box h3{color:#111}.light .box.k h3,.dark .box h3{color:#fff}.dark .box.w h3{color:#111}
+.box p,.box li{font-size:16px;line-height:1.5}
+.box b{font-weight:600;color:#111}.dark .box b,.light .box.k b{color:#fff}.dark .box.w b{color:#111}
+.box ul{padding-left:18px}.box li{margin-bottom:4px}
+.num{display:inline-block;font-size:14px;font-weight:600;color:var(--acc-ink);letter-spacing:0;margin-bottom:8px}
+.dark .num{color:var(--acc)}
+.strip{position:absolute;left:64px;right:64px;bottom:52px;border-radius:18px;padding:18px 26px;font-size:20px;line-height:1.45;display:flex;align-items:center;gap:16px}
+.light .strip{background:#111;color:#e9e9e9}.dark .strip{background:#fff;color:#222}
+.strip b{font-weight:600}.light .strip b{color:#fff}.dark .strip b{color:#000}
+.chip{flex:none;border-radius:999px;padding:6px 14px;font-size:13px;font-weight:600}
+.light .strip .chip{background:var(--acc);color:#111}.dark .strip .chip{background:#111;color:#fff}
+.wip{border:2px dashed var(--acc2);color:var(--acc-ink);border-radius:16px;padding:12px 18px;font-size:14px;line-height:1.45}
+.dark .wip{color:var(--acc)}
+
+/* title */
+.title-wrap{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 120px}
+.kicker{font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--acc);margin-bottom:22px}
+.t1{font-size:46px;font-weight:600;line-height:1.18;letter-spacing:-.01em}
+.t1 em{font-style:normal;color:var(--acc)}
+.t2{font-size:25px;font-weight:600;color:#e6e6e6;margin-top:22px;max-width:980px;line-height:1.4}
+.who{margin-top:90px;display:flex;gap:56px;font-size:17px}
+.who .lab{display:block;font-size:12px;color:#8d8d8d;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.who b{font-weight:600}
+.meta{margin-top:26px;font-size:14px;color:#8d8d8d}
+
+/* chat */
+.chats{display:grid;grid-template-columns:1fr 1fr;gap:28px;height:100%}
+.win{background:#fff;border-radius:20px;padding:18px 22px;display:flex;flex-direction:column;gap:10px;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+.win .bar{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#888}
+.win .bar .dots{letter-spacing:3px;color:#bbb}
+.win .lbl{font-size:13px;font-weight:600;color:var(--acc-ink)}
+.msg{border-radius:14px;padding:12px 16px;font-size:15px;line-height:1.5;max-width:92%}
+.msg.u{align-self:flex-end;background:#f1f1f1;color:#222;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px}
+.msg.u mark{background:var(--acc-soft);color:#111;padding:0 3px;border-radius:3px;font-weight:600}
+.msg.a{align-self:flex-start;background:#111;color:#eee}
+.msg.a.ok{background:#fff3e8;color:#3a2a1c;border:1px solid var(--acc-soft)}
+.redact{display:inline-block;background:#3a2a1c;border-radius:3px;height:11px;vertical-align:middle;margin:0 2px}
+.win .verdict{margin-top:auto;font-size:14px;font-weight:600}
+.verdict.no{color:#111}.verdict.yes{color:#c7561a}
+
+/* timeline */
+.tl{position:relative;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;height:100%}
+.tl .rail{position:absolute;left:0;right:0;top:44px;height:4px;border-radius:4px;background:linear-gradient(90deg,#cfcfcf,#cfcfcf 60%,var(--acc2))}
+.stage-c{position:relative;display:flex;flex-direction:column}
+.stage-c .yr{display:inline-flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:#111;height:30px;margin-bottom:28px}
+.stage-c .yr i{width:18px;height:18px;border-radius:50%;background:#fff;border:4px solid #bdbdbd;display:inline-block;position:relative;top:0}
+.stage-c.hot .yr i{border-color:var(--acc2);background:var(--acc)}
+.stage-c .box{flex:1;display:flex;flex-direction:column}
+.stage-c .box h3{font-size:21px}
+.stage-c .box .sub{font-size:14px;color:#888;margin:-4px 0 12px}
+.stage-c .box.k .sub{color:#aaa}
+.stage-c .box .cite{margin-top:auto;padding-top:10px}
+
+/* table */
+.tbl{width:100%;border-collapse:separate;border-spacing:0 8px;font-size:15px}
+.tbl th{font-size:13px;font-weight:500;color:var(--cite);text-align:left;padding:0 16px 2px}
+.tbl td{padding:12px 16px;vertical-align:top;line-height:1.4}
+.dark .tbl td{background:var(--dcard);color:#d6d6d6}
+.dark .tbl td:first-child{border-radius:14px 0 0 14px;color:#fff;font-weight:600}
+.dark .tbl td:last-child{border-radius:0 14px 14px 0}
+.dark .tbl td.hi{color:var(--acc)}
+.tbl.inf td{height:84px;vertical-align:middle}
+.tbl.inf td.blank{color:#5f5f5f;font-style:italic}.tbl.inf td{font-size:18px;padding:16px 16px;line-height:1.4}.tbl.inf td:nth-child(3),.tbl.inf td:last-child{white-space:nowrap}.tbl.inf th{font-size:13px;padding:0 18px 4px}.tbl.inf td:first-child{font-size:20px}
+
+/* stat */
+.stat{font-size:64px;font-weight:700;line-height:1;letter-spacing:-.02em}
+.stat small{font-size:24px;font-weight:600;margin-left:4px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:16px 0 14px}
+.stats .s{font-size:40px;font-weight:700;line-height:1}
+.stats .l{font-size:13px;line-height:1.35;margin-top:6px;color:inherit;opacity:.8}
+
+/* pipeline */
+.pipe{display:flex;align-items:stretch;gap:0;margin-top:6px}
+.pipe .st{flex:1;border-radius:18px;padding:20px 18px;background:#fff;color:#555;position:relative}
+.pipe .st.k{background:#111;color:#cfcfcf}
+.pipe .st .n{font-size:52px;font-weight:700;color:#111;line-height:1}
+.pipe .st.k .n{color:var(--acc)}
+.pipe .st .t{font-size:16px;font-weight:600;color:#111;margin-top:8px}
+.pipe .st.k .t{color:#fff}
+.pipe .st .d{font-size:13.5px;line-height:1.45;margin-top:6px}
+.pipe .ar{flex:none;width:34px;display:flex;align-items:center;justify-content:center;color:#9a9a9a;font-size:26px}
+
+/* figure slides */
+.figwrap{display:grid;grid-template-columns:1fr 300px;gap:24px;height:100%}
+.figcard{background:#fff;border-radius:20px;padding:14px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.figcard img{max-width:100%;max-height:100%;display:block}
+.side{display:flex;flex-direction:column;gap:14px}
+.side .box{padding:18px 20px}
+.side .box p{font-size:14.5px}
+.side .box h3{font-size:17px;margin-bottom:6px}
+
+/* data sources */
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.grid4 .box{padding:20px 20px}
+.grid4 .box .big{font-size:40px;font-weight:700;color:#111;line-height:1}
+.grid4 .box.k .big{color:var(--acc)}
+.grid4 .box h3{font-size:17px;margin:8px 0 6px}
+.grid4 .box p{font-size:14px;line-height:1.45}
+.samp{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+.samp .box{padding:18px 20px}
+.samp .box h3{font-size:17px;margin-bottom:6px}
+.samp .box p{font-size:14px;line-height:1.45}
+
+/* GT slide */
+.gt{display:grid;grid-template-columns:1.05fr 1.25fr 1fr;gap:18px;align-items:start}
+.gt .box p,.gt .box li{font-size:15px}
+.steps{list-style:none;padding:0!important;counter-reset:s}
+.steps li{counter-increment:s;position:relative;padding-left:34px;margin-bottom:9px!important}
+.steps li::before{content:counter(s);position:absolute;left:0;top:1px;width:22px;height:22px;border-radius:50%;background:var(--acc);color:#111;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+
+/* theory map */
+#tmap{width:100%;height:100%}
+#tmap text{font-family:Poppins,system-ui,sans-serif}
+
+/* refs */
+.refs{columns:2;column-gap:40px;font-size:11.4px;line-height:1.42;color:#cfcfcf}
+.refs p{padding-left:18px;text-indent:-18px;margin-bottom:5px;break-inside:avoid}
+.refs i{color:#fff}
+
+/* thank you */
+.qt{display:flex;flex-direction:column}.qt .q{font-size:22px!important;line-height:1.4!important;font-weight:500;color:#111;margin:4px 0 auto}.box.k.qt .q{color:#fff}.qt .cite{margin-top:12px}
+.qt .q.big{font-size:25px!important;line-height:1.45!important;margin-bottom:18px}.qt .codes{display:flex;flex-wrap:wrap;gap:8px}.qt .codes span{font-size:12.5px;border:1px solid #444;color:#ddd;border-radius:999px;padding:4px 12px}.qt .q{font-size:19px!important}
+.pz ul{padding-left:18px}.pz li{font-size:15.5px!important;line-height:1.5;margin-bottom:8px}.pz h3{font-size:21px}
+.light .tbl.mot td{background:#fff;color:#555;font-size:15px}.light .tbl.mot td:first-child{border-radius:14px 0 0 14px;color:#111;font-weight:600}.light .tbl.mot td:last-child{border-radius:0 14px 14px 0;background:#111;color:#ddd}.light .tbl.mot td:last-child b{color:#fff}.tbl.mot b{color:#111;font-weight:600}
+.dark .box.w .num{color:#5b5b5b}.light .box.k .num{color:#bdbdbd}
+.shot{background:#fff;border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;min-height:0}.shot .cap{display:flex;justify-content:space-between;font-size:14px;color:#111;margin-bottom:8px}.shot .im{flex:1;min-height:0;display:flex;align-items:flex-start;justify-content:center}.shot img{max-width:100%;max-height:100%;display:block;border:1px solid #eee;border-radius:8px}
+.tlw{position:relative;width:1152px;height:560px}.tlw svg{position:absolute;inset:0}
+.tln{position:absolute;width:230px;text-align:center}.tln .yr{font-size:13px;font-weight:600;color:#8d8d8d;letter-spacing:.06em}.tln .tt{font-size:19px;font-weight:600;color:#111;margin:2px 0 4px}.tln .tx{font-size:14px;line-height:1.45;color:#555}
+.stg{position:absolute;top:530px;padding-top:0;font-size:13px;white-space:nowrap;color:#5b5b5b;text-align:center}.stg b{color:#111;font-weight:600}
+.seg{stroke-dasharray:var(--L);stroke-dashoffset:var(--L);transition:stroke-dashoffset .7s ease}.seg.frag{opacity:1;transform:none}.seg.on{stroke-dashoffset:0}
+.rq{display:flex;align-items:center;gap:16px;background:#fff;border-radius:18px;padding:16px 24px;font-size:19px;line-height:1.45;color:#333}.rq b{color:#111;font-weight:600}.rq .chip{flex:none;border-radius:999px;padding:6px 14px;font-size:13px;font-weight:600;background:#111;color:#fff}
+.ds{display:grid;grid-template-columns:330px 40px 1fr;align-items:stretch}.ds .arr{display:flex;align-items:center;justify-content:center;font-size:40px;color:#9a9a9a}
+.samp1 p{font-size:16.5px!important}.samp1 h3{font-size:24px}
+.srcs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.src{display:flex;flex-direction:column}.src h3{font-size:20px;margin:12px 0 8px}.src p{font-size:15.5px!important}
+.src .st{align-self:flex-start;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;border:1.5px dashed #9a9a9a;color:#5b5b5b}.src .st.on{border:1.5px solid #111;background:#111;color:#fff}
+.mot2{display:flex;flex-direction:column}.mot2 .lbl{font-size:12px;font-weight:600;color:#9a9a9a;margin:16px 0 4px}.mot2 p{font-size:17px!important;line-height:1.5}
+.mot2 .pq{margin-top:auto;padding-top:14px;border-top:1px solid #e3e3e3;font-size:18px;line-height:1.45;color:#111}.mot2.k .pq{border-color:#333;color:#fff}.mot2 .pq b{font-weight:600}
+.flow{margin-top:16px;display:grid;grid-template-columns:360px 50px 1fr;align-items:stretch}.flow .arr{display:flex;align-items:center;justify-content:center;font-size:40px;color:#9a9a9a}
+.fl0 h3,.fl1 h3{font-size:26px;margin-bottom:12px}.fl0 p,.fl1 li,.fl1 p{font-size:18px!important;line-height:1.55!important}.fl0,.fl1{padding:30px 30px}.fl1 ul{padding-left:18px;margin:4px 0 10px}.fl1 .why{border-top:1px solid #e3e3e3;padding-top:10px;color:#555}
+.fl2{display:flex;flex-direction:column;gap:10px}.src2{background:#fff;border-radius:16px;padding:11px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex:1}.src2 h3{font-size:18px;color:#111;margin-bottom:2px}.src2 p{font-size:14px;color:#555;line-height:1.4}
+.src2 .st{flex:none;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;border:1.5px dashed #9a9a9a;color:#5b5b5b}.src2 .st.on{border:1.5px solid #111;background:#111;color:#fff}
+.gtw{padding:30px 28px}.gtw h3{font-size:24px;margin-bottom:14px}.gtw p{font-size:18px!important;line-height:1.6}
+.mtx{display:grid;grid-template-columns:1fr 110px 1.15fr;row-gap:14px;align-items:stretch}
+.mtx .mh{font-size:22px;font-weight:600;color:#111;padding:0 4px 2px;text-align:center}
+.ob{background:#fff;border-radius:999px;padding:16px 30px;font-size:17px;line-height:1.45;color:#444;display:flex;align-items:center;box-shadow:0 1px 0 rgba(0,0,0,.04)}.ob b{color:#111;font-weight:600}
+
+.th{background:#111;border-radius:18px;padding:14px 22px;color:#cfcfcf;display:flex;flex-direction:column;justify-content:center}.th .tht{font-size:14px;font-weight:600;color:#fff;margin-bottom:4px}.th p{font-size:15.5px;line-height:1.45}.th b{color:#fff;font-weight:600}
+.vs{position:relative;display:flex;align-items:center;justify-content:center}
+.ar{position:relative;width:84px;height:2px;background:#111;transform-origin:left center}.ar::after{content:"";position:absolute;right:-2px;top:-6px;border-left:12px solid #111;border-top:7px solid transparent;border-bottom:7px solid transparent}
+.ar.frag{opacity:1;transform:scaleX(0);transition:transform .45s ease .35s}.ar.frag.on{transform:scaleX(1)}
+.xx{position:absolute;left:50%;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;background:#fff;border:2px solid #e0352b;color:#e0352b;font-size:22px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:Arial,Helvetica,sans-serif}
+.xx.frag{transform:scale(.4)}.xx.frag.on{transform:scale(1)}
+.th.dly{transition-delay:.7s}
+.qside{justify-content:center}.sq{background:#fff;border-radius:18px;padding:20px 22px}.sq.k{background:#111}.dark .sq{background:#1c1c1c;border:1px solid #333}
+.sq .qq{font-size:17px;line-height:1.5;font-weight:500;color:#111}.sq.k .qq,.dark .sq .qq{color:#fff}.sq .qs{font-size:12.5px;color:#8d8d8d;margin-top:10px}
+.figwrap{grid-template-columns:1fr 300px!important}
+.qbar{flex:none;display:flex;align-items:baseline;gap:18px;border-radius:16px;padding:14px 22px;background:#fff}.dark .qbar{background:#1c1c1c;border:1px solid #333}
+.qbar .qq{flex:1;font-size:17px;line-height:1.45;font-weight:500;color:#111}.dark .qbar .qq{color:#fff}.qbar .qs{flex:none;font-size:13px;color:#8d8d8d;white-space:nowrap}
+#nav.hide{opacity:0;pointer-events:none}
+.cc{background:#fff;border-radius:22px;padding:26px 26px;display:flex;flex-direction:column;color:#555}.cc.k{background:#1c1c1c;border:1px solid #333;color:#cfcfcf}
+.cc .cn{font-size:56px;font-weight:700;line-height:1;color:#111;letter-spacing:-.02em}.cc.k .cn{color:#fff}
+.cc .cl{font-size:13px;font-weight:600;color:#8d8d8d;margin:12px 0 4px}.cc h3{font-size:23px;font-weight:600;color:#111;line-height:1.25;margin-bottom:18px}.cc.k h3{color:#fff}
+.cc .from{font-size:15px;line-height:1.5;color:#8d8d8d;border-radius:12px;background:#f2f2f2;padding:12px 14px}.cc.k .from{background:#262626;color:#9a9a9a}
+.cc .to{font-size:16px;line-height:1.5;color:#222;border-radius:12px;border:2px solid #111;padding:12px 14px}.cc.k .to{border-color:#fff;color:#eee}.cc .to b{color:#111;font-weight:600}.cc.k .to b{color:#fff}
+.cc .from span,.cc .to span{display:block;font-size:12px;font-weight:600;margin-bottom:2px}.cc .to span{color:#111}.cc.k .to span{color:#fff}
+.cc .down{text-align:center;font-size:22px;color:#9a9a9a;margin:6px 0}
+.dsg{display:grid;grid-template-columns:330px 44px 1fr;grid-template-rows:260px auto;column-gap:18px;row-gap:18px}
+.dcol{display:flex;flex-direction:column;gap:16px;justify-content:space-between}.dcol.dash{grid-column:1;grid-row:2;flex-direction:column;gap:12px}
+.dsrc{border:2px solid #fff;border-radius:18px;padding:18px 22px;flex:1}.dsrc h3{font-size:21px;color:#fff;margin-bottom:4px}.dsrc p{font-size:14.5px;color:#bdbdbd;line-height:1.45}
+.dsrc.d{border:2px dashed #7a7a7a;padding:10px 22px}.dsrc.d h3{font-size:17px;color:#bdbdbd}.dsrc.d p{font-size:13px;color:#8d8d8d}
+.brace{width:44px;height:260px;align-self:center}
+.crow{display:flex;align-items:center;justify-content:space-between;height:260px}
+.cw{display:flex;flex-direction:column;align-items:center;gap:10px;width:118px}.cbox{height:132px;display:flex;align-items:center;justify-content:center}.cv{color:#7a7a7a;font-size:26px;margin-bottom:46px}
+.cc2{border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center}.cc2 span{font-size:34px;font-weight:700;color:#111}.cc2.k{background:#1c1c1c;border:2px solid #fff}.cc2.k span{color:#fff}
+.cl2{font-size:13.5px;color:#cfcfcf;text-align:center;line-height:1.3;height:36px}
+.s2w{position:relative;width:100%;height:100%}
+.s2w img{position:absolute;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,.08);background:#fff}
+.s2q1{width:940px;left:106px;top:40px;transition:opacity .4s ease}
+.s2w:has(.s2q2.on) .s2q1{opacity:0}
+.s2q2{width:1100px;left:26px;top:0;box-shadow:none;background:transparent}
+.figcard img{cursor:zoom-in}
+#zoom{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;z-index:20;cursor:zoom-out}
+#zoom.on{display:flex}#zoom img{max-width:96vw;max-height:94vh;background:#fff;border-radius:8px}
+#zoom .zh{position:fixed;top:14px;right:20px;color:#aaa;font:13px Poppins,system-ui,sans-serif}
+.ctr{display:grid;grid-template-columns:90px 1fr;align-items:start;gap:10px;border-top:1px solid #333;padding-top:20px}
+.ctr .ctn{font-size:60px;font-weight:700;line-height:.9;color:#fff}
+.ctr h3{font-size:24px;font-weight:600;color:#fff;margin-bottom:6px}.ctr p{font-size:18px;line-height:1.55;color:#bdbdbd}.ctr b{color:#fff;font-weight:600}
+.cthead,.ct2{display:grid;grid-template-columns:56px 270px 1fr;gap:0}
+.cthead{font-size:13px;color:#8d8d8d;padding:0 20px 8px}
+.ct2{background:#1c1c1c;border:1px solid #333;border-radius:16px;margin-bottom:12px;padding:20px 20px;align-items:start}
+.ct2 .c1{font-size:34px;font-weight:700;color:#fff;line-height:1}
+.ct2 .c2{padding-right:20px}.ct2 .c2 b{display:block;font-size:17px;font-weight:600;color:#fff;line-height:1.35}.ct2 .c2 span{display:block;font-size:12.5px;color:#8d8d8d;margin-top:6px}
+.ct2 .c3 h3{font-size:19px;font-weight:600;color:#fff;margin-bottom:6px}.ct2 .c3 p{font-size:15.5px;line-height:1.55;color:#bdbdbd}.ct2 .c3 b{color:#fff;font-weight:600}
+.cv3{background:#fff;border-radius:22px;padding:30px 28px;display:flex;flex-direction:column}.cv3.k{background:#1c1c1c;border:1px solid #333}
+.cv3 .n{font-size:64px;font-weight:700;line-height:1;color:#111}.cv3.k .n{color:#fff}
+.cv3 h3{font-size:24px;font-weight:600;line-height:1.3;color:#111;margin:18px 0 16px}.cv3.k h3{color:#fff}
+.cv3 p{font-size:21px;line-height:1.6;color:#555;margin-top:26px}.cv3.k p{color:#bdbdbd}.cv3 b{color:#111;font-weight:600}.cv3.k b{color:#fff}
+.s2cap{justify-content:center;text-align:center;font-size:21px}
+.thanks{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:120px;font-weight:700;letter-spacing:-.03em}
+
+/* nav */
+#nav{transition:opacity .4s;position:fixed;left:16px;bottom:16px;display:flex;align-items:center;gap:6px;background:rgba(40,40,40,.72);backdrop-filter:blur(6px);border-radius:999px;padding:6px 8px;z-index:10;font-family:Poppins,system-ui,sans-serif;font-size:13px;color:#ddd}
+#nav button{background:transparent;border:none;color:#eee;font:inherit;font-size:18px;width:30px;height:30px;border-radius:50%;cursor:pointer}
+#nav button:hover{background:rgba(255,255,255,.12)}
+#nav input{width:38px;background:rgba(255,255,255,.1);border:none;border-radius:8px;color:#fff;font:inherit;text-align:center;padding:4px 2px}
+#nav .go{font-size:13px;width:auto;padding:0 10px;border-radius:999px}
+@media (max-width:600px){#nav{left:8px;bottom:8px}}
+
+/* no accent highlights unless requested */
+.hd h2 em,.dark .hd h2 em,.light .hd h2 em{color:inherit!important;background:none!important;padding:0!important}
+.steps li::before{background:#d0d0d0!important;color:#111!important}
+.dark .tbl td.hi{color:#d6d6d6}
+.stage-c.hot .yr i{border-color:#111;background:#111}
+.msg.a.ok{background:#f1f1f1;color:#222;border:1px solid #e2e2e2}
+.redact{background:#555}
+.msg.u mark{background:none;padding:0}
+.verdict.yes{color:#111}
+.wip,.dark .wip{color:#9a9a9a;border-color:#8d8d8d}
+</style>
+</head>
+<body>
+<div id="stage">
+
+<!-- 1 TITLE -->
+<section class="slide dark" data-n="1">
+  <div class="title-wrap">
+    <div class="t1">The <span style="color:#ffb178">Ghost Brain</span> Behind AI</div>
+    <div class="t2">How digital labour platforms extract and convert distributed, tacit professional judgement into AI capability</div>
+    <div class="who">
+      <div><span class="lab">Presenter</span><b>Dan Xu</b><br><span style="color:#bdbdbd;font-size:15px">ISTM, UNSW Business School</span></div>
+    </div>
+    <div class="meta">Wednesday, 18 November 2026</div>
+  </div>
+  <div class="pg">1</div>
+</section>
+
+<!-- 2 STORY -->
+<section class="slide light" data-n="2">
+  <div class="hd"><h2>Has this happened to you...</h2></div>
+  <div class="body" style="top:130px;bottom:30px">
+    <div class="s2w">
+      <img class="s2q1" src="q1.png" alt="Chatbot refuses to explain how to make dynamite">
+      <img class="s2q2 frag" src="q2w.png" alt="The same chatbot answers when the user says they are a chemistry student, listing materials and steps (blurred)">
+    </div>
+  </div>
+  <div class="strip frag s2cap"><span><b>AI has the facts but still doesn’t know where to draw the line.</b> Knowing where the line is takes human <span style="color:#ffb178;font-weight:600">boundary judgement</span>.</span></div>
+  <div class="pg">2</div>
+</section>
+
+<!-- TRANSITION: HISTORY -->
+<section class="slide light" data-n="3">
+  <div class="thanks">History</div>
+  <div class="pg">3</div>
+</section>
+
+<!-- 4 TIMELINE -->
+<section class="slide light" data-n="4">
+  <div class="hd"><h2>From crowd work to expert judgement</h2></div>
+  <div class="body" style="top:130px;bottom:30px">
+    <div class="tlw"><svg viewBox="0 0 1152 560" width="1152" height="560" aria-hidden="true"><rect class="frag" data-step="7" x="775" y="0" width="377" height="560" rx="18" fill="#ffb178" fill-opacity=".12"/><path class="seg frag" data-step="1" d="M0,245 C45.0,245 45.0,190 90,190" fill="none" stroke="#111" stroke-width="3" stroke-linecap="round"/><path class="seg frag" data-step="2" d="M90,190 C187.5,190 187.5,300 285,300" fill="none" stroke="#111" stroke-width="3" stroke-linecap="round"/><path class="seg frag" data-step="3" d="M285,300 C382.5,300 382.5,190 480,190" fill="none" stroke="#111" stroke-width="3" stroke-linecap="round"/><path class="seg frag" data-step="4" d="M480,190 C574.0,190 574.0,300 668,300" fill="none" stroke="#111" stroke-width="3" stroke-linecap="round"/><path class="seg frag" data-step="5" d="M668,300 C768.0,300 768.0,190 868,190" fill="none" stroke="#111" stroke-width="3" stroke-linecap="round"/><path class="seg frag" data-step="6" d="M868,190 C963.0,190 963.0,300 1058,300" fill="none" stroke="#111" stroke-width="3" stroke-linecap="round"/><path class="seg frag" data-step="6" d="M1058,300 C1105.0,300 1105.0,245 1152,245" fill="none" stroke="#111" stroke-width="3" stroke-linecap="round"/><line class="frag" data-step="7" x1="775" y1="10" x2="775" y2="520" stroke="#9a9a9a" stroke-width="1.5" stroke-dasharray="6 6"/><circle class="frag" data-step="1" cx="90" cy="190" r="9" fill="#fff" stroke="#111" stroke-width="3"/><circle class="frag" data-step="2" cx="285" cy="300" r="9" fill="#fff" stroke="#111" stroke-width="3"/><circle class="frag" data-step="3" cx="480" cy="190" r="9" fill="#fff" stroke="#111" stroke-width="3"/><circle class="frag" data-step="4" cx="668" cy="300" r="9" fill="#fff" stroke="#111" stroke-width="3"/><circle class="frag" data-step="5" cx="868" cy="190" r="9" fill="#111" stroke="#111" stroke-width="3"/><circle class="frag" data-step="6" cx="1058" cy="300" r="13" fill="#111" stroke="#111" stroke-width="3"/></svg><div class="tln frag" data-step="1" style="left:0px;width:230px;bottom:394px"><div class="yr">2005</div><div class="tt">Crowd platforms</div><div class="tx">Microtasks and gig work on Amazon Mechanical Turk (Irani, 2015)</div></div><div class="tln frag" data-step="2" style="left:170.0px;width:230px;top:324px"><div class="yr">2009</div><div class="tt">Image labelling for AI</div><div class="tx">Crowd workers tag millions of images (“cat”, “car”) to build ImageNet (Deng et al., 2009)</div></div><div class="tln frag" data-step="3" style="left:365.0px;width:230px;bottom:394px"><div class="yr">2010s</div><div class="tt">Overseas data factories</div><div class="tx">Outsourcing centres in Kenya, Uganda, the Philippines follow rubrics and instructions (Miceli &amp; Posada, 2022)</div></div><div class="tln frag" data-step="4" style="left:568.0px;width:200px;top:324px"><div class="yr">2022</div><div class="tt">Human feedback</div><div class="tx">Workers rank chatbot answers from best to worst to train the model (Ouyang et al., 2022)</div></div><div class="tln frag" data-step="5" style="left:780.0px;width:176px;bottom:394px"><div class="yr">2023</div><div class="tt">Expert judgement</div><div class="tx">Mercor, Micro1, Outlier recruit PhDs, lawyers, doctors ($50–$200+/hour)</div></div><div class="tln frag" data-step="6" style="left:968.0px;width:180px;top:324px"><div class="yr">2025</div><div class="tt">Rubrics and benchmarks</div><div class="tx">Experts write the rubric (Vidgen et al., 2025)</div></div><div class="stg frag" data-step="7" style="left:10px;width:755px"><b>Data factories</b> · crowd and outsourced labour</div><div class="stg frag" data-step="7" style="left:785px;width:167px"><b>Expert judgement</b></div><div class="stg frag" data-step="7" style="left:972px;width:170px"><b>Rubrics and benchmarks</b></div></div>
+  </div>
+  <div class="pg">4</div>
+</section>
+
+<!-- TRANSITION: MOTIVATION -->
+<section class="slide light" data-n="5">
+  <div class="thanks">Motivation</div>
+  <div class="pg">5</div>
+</section>
+
+<!-- MOTIVATION OVERVIEW -->
+<section class="slide light" data-n="6">
+  <div class="hd"><h2>Theoretical motivation</h2></div>
+  <div class="body" style="top:128px;bottom:150px">
+    <div class="mtx">
+      <div class="mh">Phenomenon</div><div></div><div class="mh">Current theory</div>
+      <div class="ob frag" data-step="1"><span>AI labs pay elite, still-practising experts for their <b>professional judgement and knowledge</b> to refine AI models.</span></div><div class="vs"><div class="ar frag" data-step="1"></div><div class="xx frag" data-step="2">✕</div></div><div class="th frag dly" data-step="1"><div class="tht">Labour process and automation</div><p>Complex work is decomposed and passed to <b>cheaper labour or machines</b> (Braverman, 1974; Autor et al., 2003).</p></div><div class="ob frag" data-step="3"><span>A platform sources <b>scarce, non-interchangeable experts</b> and keeps their judgement data as its own assets.</span></div><div class="vs"><div class="ar frag" data-step="3"></div><div class="xx frag" data-step="4">✕</div></div><div class="th frag dly" data-step="3"><div class="tht">Platform work</div><p>Work is split into microtasks for large pools of <b>interchangeable, cheap workers</b> (Kittur et al., 2013; Möhlmann et al., 2021).</p></div><div class="ob frag" data-step="5"><span>What is extracted is <b>evaluative, boundary-setting judgement</b>, from experts outside any one firm.</span></div><div class="vs"><div class="ar frag" data-step="5"></div><div class="xx frag" data-step="6">✕</div></div><div class="th frag dly" data-step="5"><div class="tht">Knowledge management</div><p>Tacit knowledge is mainly <b>know-how</b>, such as skill and craft, which firms convert into explicit knowledge (Nonaka &amp; von Krogh, 2009; Hadjimichael &amp; Tsoukas, 2019).</p></div>
+    </div>
+  </div>
+  <div class="strip frag" data-step="7"><span class="chip">Research question</span><span>How do digital labour platforms <b>extract and convert</b> distributed, tacit professional judgement into AI capability?</span></div>
+  <div class="pg">6</div>
+</section>
+
+<!-- TRANSITION: METHODOLOGY -->
+<section class="slide light" data-n="7">
+  <div class="thanks">Methodology</div>
+  <div class="pg">7</div>
+</section>
+
+<!-- 8 DATA + SAMPLING -->
+<section class="slide light" data-n="8">
+  <div class="hd"><h2>From data to theory</h2></div>
+  <div class="body" style="top:128px;bottom:36px;display:flex;flex-direction:column;gap:16px">
+    <div class="rq"><span class="chip">Grounded theory</span><span>These platforms are <b>new</b> and existing theories <b>cannot explain them</b>, so we build theory from data rather than test it (Glaser &amp; Strauss, 1967; Charmaz, 2014).</span></div>
+    <div class="flow">
+      <div class="box k fl0"><h3>Purposeful sampling</h3><p>Select <b>information-rich</b> cases and data that speak directly to the research question (Patton, 2015).</p></div>
+      <div class="arr frag" data-step="1">›</div>
+      <div class="box frag fl1" data-step="1"><h3>Mercor, an extreme case</h3>
+        <ul><li><b>$10B</b> valuation within three years of founding</li><li><b>30,000+</b> experts at US$85+ an hour (TechCrunch, 2025)</li><li>Builds its <b>own benchmarks</b> (Vidgen et al., 2025)</li></ul>
+        <p class="why">Extreme cases make the process <b>transparently observable</b> (Pettigrew, 1990; Eisenhardt, 1989; Flyvbjerg, 2006).</p></div>
+      
+    </div>
+  </div>
+  <div class="pg">8</div>
+</section>
+
+<!-- DATA SOURCES -->
+<section class="slide dark" data-n="9">
+  <div class="hd"><h2>Data sources and analysis</h2></div>
+  <div class="body" style="top:140px;bottom:40px">
+    <div class="dsg">
+      <div class="dcol">
+        <div class="dsrc"><h3>Interviews</h3><p>4 Mercor workers in four countries</p></div>
+        <div class="dsrc"><h3>Reddit posts</h3><p>2 posts, from a keyword search for “Mercor”</p></div>
+      </div>
+      <svg class="brace frag" viewBox="0 0 44 280" preserveAspectRatio="none" aria-hidden="true"><path d="M2,2 C22,2 22,2 22,24 L22,118 C22,134 30,140 42,140 C30,140 22,146 22,162 L22,256 C22,278 22,278 2,278" fill="none" stroke="#fff" stroke-width="2.5"/></svg>
+      <div class="crow"><div class="cw frag"><div class="cbox"><div class="cc2" style="width:128px;height:128px"><span>168</span></div></div><div class="cl2">Initial codes</div></div><div class="cv frag">›</div><div class="cw frag"><div class="cbox"><div class="cc2" style="width:116px;height:116px"><span>38</span></div></div><div class="cl2">First-order concepts</div></div><div class="cv frag">›</div><div class="cw frag"><div class="cbox"><div class="cc2" style="width:106px;height:106px"><span>15</span></div></div><div class="cl2">Second-order themes</div></div><div class="cv frag">›</div><div class="cw frag"><div class="cbox"><div class="cc2" style="width:96px;height:96px"><span>4</span></div></div><div class="cl2">Aggregate dimensions</div></div><div class="cv frag">›</div><div class="cw frag"><div class="cbox"><div class="cc2 k" style="width:88px;height:88px"><span>2</span></div></div><div class="cl2">Core categories</div></div></div>
+      <div class="dcol dash frag">
+        <div class="dsrc d"><h3>News articles</h3><p>130 articles on Mercor in Factiva</p></div>
+        <div class="dsrc d"><h3>Podcast episodes</h3><p>Episodes discussing Mercor</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="pg">9</div>
+</section>
+
+<!-- 9 INFORMANTS -->
+<section class="slide dark" data-n="10">
+  <div class="hd"><h2>Our <em>informants</em></h2></div>
+  <div class="body" style="top:136px">
+    <table class="tbl inf">
+      <thead><tr><th style="width:60px">ID</th><th style="width:80px">Gender</th><th style="width:150px">Based in</th><th>Background</th><th style="width:100px">Role</th><th>Pay</th><th style="width:120px">Time on platform</th></tr></thead>
+      <tbody>
+        <tr><td>P1</td><td>Woman</td><td>Dubai, UAE</td><td>Financial consulting; Imperial College London graduate</td><td>Writer</td><td>~US$120/hr (says lower than North American rates)</td><td>6 months</td></tr>
+        <tr><td>P2</td><td>Man</td><td>New York, US</td><td>Computer engineering</td><td>Reviewer</td><td>US$10,000+/month, part-time</td><td>6 months</td></tr>
+        <tr><td>P3</td><td>Man</td><td>Australia</td><td>Health (formerly banking); University of Sydney graduate</td><td>Writer</td><td>N/A</td><td>3 months</td></tr>
+        <tr><td>P4</td><td>Woman</td><td>Canada</td><td>Music design</td><td>Writer</td><td>US$150/hr</td><td>6 months</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pg">10</div>
+</section>
+
+<!-- 10 TRANSITION: DATA -->
+<section class="slide light" data-n="11">
+  <div class="thanks">Data</div>
+  <div class="pg">11</div>
+</section>
+
+<!-- 11 FIG 1 -->
+<section class="slide dark" data-n="12">
+  <div class="hd"><h2 style="font-size:32px">Data structure 1: extraction and validation of judgemental expertise</h2></div>
+  <div class="body" style="top:122px;bottom:36px">
+    <div class="figwrap">
+      <div class="figcard"><img src="data-structure-part1.png" alt="Data structure for the core category Extraction of judgemental expertise"></div>
+      <div class="side qside"><div class="sq frag"><p class="qq">“As a human, you can recognise that, although it’s framed as a company scenario, a hacker could also use it for an attack … That’s an area where <span style="color:#ffb178">AI can’t match human judgement</span>, and we need to keep providing it with input.”</p><p class="qs">P4, writer, Canada (interview)</p></div></div>
+    </div>
+  </div>
+  <div class="pg">12</div>
+</section>
+
+<!-- 12 FIG 2 -->
+<section class="slide light" data-n="13">
+  <div class="hd"><h2>Data structure 2: orchestration of expert data work</h2></div>
+  <div class="body" style="top:122px;bottom:36px">
+    <div class="figwrap">
+      <div class="figcard"><img src="data-structure-part2.png" alt="Data structure for the core category Governance of expert data work"></div>
+      <div class="side qside"><div class="sq k frag"><p class="qq">“… it’s like <span style="color:#ffb178">construction workers waiting for work outside a Home Depot</span>. If there’s work, if there’s a project, you can get on it; if you can’t get on it, then you’re forever outside that project, you know? Like those day laborers at construction sites in China.”</p><p class="qs">P2, reviewer, New York (interview)</p></div></div>
+    </div>
+  </div>
+  <div class="pg">13</div>
+</section>
+
+<!-- 14 THEMES -> THEORIES -->
+<section class="slide dark" data-n="14">
+  <div class="hd"><h2>From themes to <em>theory</em></h2></div>
+  <div class="body" style="top:128px;bottom:40px">
+    <svg id="tmap" viewBox="0 0 1152 560" role="img" aria-label="Two core categories link to four aggregate dimensions, which link to six theoretical lenses">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#9a9a9a"/></marker></defs>
+      <g id="links" fill="none" stroke="#9a9a9a" stroke-width="1.6" stroke-opacity=".8"></g>
+      <g id="core"></g><g id="left"></g><g id="right"></g>
+    </svg>
+  </div>
+  <div class="pg">14</div>
+</section>
+
+<!-- TRANSITION: MODEL -->
+<section class="slide light" data-n="15">
+  <div class="thanks">Model</div>
+  <div class="pg">15</div>
+</section>
+
+<!-- 15 PROCESS MODEL -->
+<section class="slide light" data-n="16">
+  <div class="hd"><h2>Process model</h2></div>
+  <div class="body" style="top:132px;bottom:44px">
+    <div class="figcard" style="height:100%"><img src="process-model-v8.png" alt="Process model: dispersed knowledge, five platform orchestration steps, delivery and outputs, and infrastructuring into platform-owned data assets"></div>
+  </div>
+  <div class="pg">16</div>
+</section>
+
+<!-- TRANSITION: CONTRIBUTIONS -->
+<section class="slide light" data-n="17">
+  <div class="thanks">Contributions</div>
+  <div class="pg">17</div>
+</section>
+
+<!-- CONTRIBUTIONS -->
+<section class="slide dark" data-n="18">
+  <div class="hd"><h2>Expected theoretical contributions</h2></div>
+  <div class="body" style="top:140px;bottom:44px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
+    <div class="cv3 frag"><div class="n">1</div><p>Extends platform labour and crowd work research (Kittur et al., 2013; Gray &amp; Suri, 2019) by identifying a new form of worker, <b>from low-skill labellers to high-skill judgemental experts</b>, whose expertise is transferred to machine intelligence to enhance its capabilities.</p></div><div class="cv3 frag k"><div class="n">2</div><p>Extends tacit knowledge theory (Polanyi, 1966; Nonaka, 1994) beyond know-how to <b>boundary value judgement</b>, which becomes the AI capability to draw moral and ethical boundaries without being fully articulated (Tsoukas, 2003).</p></div><div class="cv3 frag"><div class="n">3</div><p>Extends algorithmic management and platformization research (Kellogg et al., 2020; Plantin et al., 2018) by showing that platforms not only organise labour but also <b>capture, extract and codify judgemental expertise</b> into their own data infrastructure.</p></div>
+  </div>
+  <div class="pg">18</div>
+</section>
+
+<!-- 16 REFERENCES -->
+<section class="slide dark" data-n="19">
+  <div class="hd"><h2>References</h2></div>
+  <div class="body" style="top:128px;bottom:130px">
+    <div class="refs"><p>Autor, D. H., Levy, F., &amp; Murnane, R. J. (2003). The skill content of recent technological change. <i>Quarterly Journal of Economics, 118</i>(4), 1279–1333.</p><p>Braverman, H. (1974). <i>Labor and monopoly capital</i>. Monthly Review Press.</p><p>Charmaz, K. (2014). <i>Constructing grounded theory</i> (2nd ed.). Sage.</p><p>Deng, J., Dong, W., Socher, R., Li, L.-J., Li, K., &amp; Fei-Fei, L. (2009). ImageNet: A large-scale hierarchical image database. <i>2009 IEEE Conference on Computer Vision and Pattern Recognition</i>, 248–255.</p><p>Eisenhardt, K. M. (1989). Building theories from case study research. <i>Academy of Management Review, 14</i>(4), 532–550.</p><p>Flyvbjerg, B. (2006). Five misunderstandings about case-study research. <i>Qualitative Inquiry, 12</i>(2), 219–245.</p><p>Glaser, B. G., &amp; Strauss, A. L. (1967). <i>The discovery of grounded theory</i>. Aldine.</p><p>Gray, M. L., &amp; Suri, S. (2019). <i>Ghost work</i>. Houghton Mifflin Harcourt.</p><p>Hadjimichael, D., &amp; Tsoukas, H. (2019). Toward a better understanding of tacit knowledge in organizations: Taking stock and moving forward. <i>Academy of Management Annals, 13</i>(2), 672–703.</p><p>Irani, L. (2015). The cultural work of microwork. <i>New Media &amp; Society, 17</i>(5), 720–739.</p><p>Kellogg, K. C., Valentine, M. A., &amp; Christin, A. (2020). Algorithms at work. <i>Academy of Management Annals, 14</i>(1), 366–410.</p><p>Kittur, A., et al. (2013). The future of crowd work. <i>Proceedings of CSCW 2013</i>, 1301–1318.</p><p>Miceli, M., &amp; Posada, J. (2022). The data-production dispositif. <i>Proceedings of the ACM on Human-Computer Interaction, 6</i>(CSCW2), 1–37.</p><p>Möhlmann, M., Zalmanson, L., Henfridsson, O., &amp; Gregory, R. W. (2021). Algorithmic management of work on online labor platforms. <i>MIS Quarterly, 45</i>(4), 1999–2022.</p><p>Nonaka, I. (1994). A dynamic theory of organizational knowledge creation. <i>Organization Science, 5</i>(1), 14–37.</p><p>Nonaka, I., &amp; von Krogh, G. (2009). Tacit knowledge and knowledge conversion. <i>Organization Science, 20</i>(3), 635–652.</p><p>Ouyang, L., et al. (2022). Training language models to follow instructions with human feedback. <i>NeurIPS 35</i>.</p><p>Patton, M. Q. (2015). <i>Qualitative research and evaluation methods</i> (4th ed.). Sage.</p><p>Pettigrew, A. M. (1990). Longitudinal field research on change: Theory and practice. <i>Organization Science, 1</i>(3), 267–292.</p><p>Plantin, J.-C., Lagoze, C., Edwards, P. N., &amp; Sandvig, C. (2018). Infrastructure studies meet platform studies. <i>New Media &amp; Society, 20</i>(1), 293–310.</p><p>Polanyi, M. (1966). <i>The tacit dimension</i>. Doubleday.</p><p>Shafiei Gol, E., et al. (2024). Expert-centric absorptive capacity. <i>Information Systems Research</i>.</p><p>TechCrunch. (2025, October 27). Mercor quintuples valuation to $10B with $350M Series C.</p><p>Tsoukas, H. (2003). Do we really understand tacit knowledge? In M. Easterby-Smith &amp; M. A. Lyles (Eds.), <i>Handbook of organizational learning and knowledge management</i> (pp. 410–427). Blackwell.</p><p>Vidgen, B., et al. (2025). The AI Productivity Index (APEX). <i>arXiv:2509.25721</i>.</p><p>Wood, A. J., Graham, M., Lehdonvirta, V., &amp; Hjorth, I. (2019). Good gig, bad gig. <i>Work, Employment and Society, 33</i>(1), 56–75.</p></div>
+  </div>
+  <div class="wip" style="position:absolute;left:64px;right:64px;bottom:46px"><b>AI use declaration.</b> Claude (Anthropic) helped search literature, draft slide text, group first-cycle codes and draw figures. All codes come from the researcher’s own coding; all interpretations and references are to be checked by the researcher.</div>
+  <div class="pg">19</div>
+</section>
+
+<!-- 17 THANKS -->
+<section class="slide light" data-n="20">
+  <div class="thanks">Thank you</div>
+  <div class="pg">20</div>
+</section>
+
+</div>
+
+<div id="zoom"><img alt=""><span class="zh">Click or press Esc to close</span></div>
+<div id="nav"><button id="prev" aria-label="Previous">‹</button><button id="next" aria-label="Next">›</button><input id="pgi" aria-label="Slide number" value="1"><span id="tot"></span><button class="go" id="go">Go</button></div>
+
+<script>
+/* theory map */
+(function(){
+  const NS='http://www.w3.org/2000/svg';
+  const C=[["Extraction and validation","of judgemental expertise"],["Orchestration of","expert data work"]];
+  const L=[["Identifying and sorting expertise",0],["Eliciting and validating judgement",0],["Organising, coordinating and","controlling dispersed expertise",1],["Contested platform–expert","labour relations",1]];
+  const R=["Absorptive capacity (Shafiei Gol et al., 2024)","Tacit knowledge (Polanyi, 1966; Nonaka, 1994)","Algorithmic management (Kellogg et al., 2020)","Data work and ghost work (Gray & Suri, 2019)","Crowd work (Kittur et al., 2013)","Gig economy (Wood et al., 2019)"];
+  const E=[[0,0],[0,2],[1,1],[1,0],[2,2],[2,3],[2,4],[3,5],[3,3]];
+  const cw=230,ch=120,lx=300,lw=330,lh=86,rx=760,rw=392,rh=64;
+  const cy=i=>[60,340][i], ly=i=>20+i*(lh+46), ry=i=>14+i*(rh+26);
+  const mk=(t,a,p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e};
+  const gc=document.getElementById('core'),gl=document.getElementById('left'),gr=document.getElementById('right'),gk=document.getElementById('links');
+  const curve=(x1,y1,x2,y2)=>{const m=(x1+x2)/2;mk('path',{d:`M${x1},${y1} C${m},${y1} ${m},${y2} ${x2},${y2}`,'marker-end':'url(#ah)'},gk)};
+  C.forEach((d,i)=>{const y=cy(i);mk('rect',{x:0,y,width:cw,height:ch,rx:60,fill:'none',stroke:'#fff','stroke-width':2},gc);
+    d.forEach((t,k)=>{const e=mk('text',{x:cw/2,y:y+ch/2+(k-(d.length-1)/2)*22+6,fill:'#fff','font-size':16,'font-weight':600,'text-anchor':'middle'},gc);e.textContent=t});});
+  L.forEach((d,i)=>{const y=ly(i);const lines=d.slice(0,-1);const c=d[d.length-1];
+    mk('rect',{x:lx,y,width:lw,height:lh,rx:16,fill:'#1c1c1c',stroke:'#333'},gl);
+    lines.forEach((t,k)=>{const e=mk('text',{x:lx+lw/2,y:y+lh/2+(k-(lines.length-1)/2)*21+6,fill:'#fff','font-size':15.5,'font-weight':600,'text-anchor':'middle'},gl);e.textContent=t});
+    curve(cw+4,cy(c)+ch/2,lx-6,y+lh/2);});
+  R.forEach((d,i)=>{const y=ry(i);mk('rect',{x:rx,y,width:rw,height:rh,rx:16,fill:'#fff'},gr);
+    const m=d.match(/^(.*?) (\(.*\))$/);
+    const t=mk('text',{x:rx+20,y:y+rh/2+6,fill:'#111','font-size':15.5,'font-weight':600},gr);t.textContent=m[1]+' ';
+    const sp=document.createElementNS(NS,'tspan');sp.setAttribute('fill','#8d8d8d');sp.setAttribute('font-weight','400');sp.setAttribute('font-size','13');sp.textContent=m[2];t.appendChild(sp);});
+  E.forEach(([a,b])=>curve(lx+lw+4,ly(a)+lh/2,rx-6,ry(b)+rh/2));
+})();
+
+/* deck engine */
+document.querySelectorAll('path.seg').forEach(p=>p.style.setProperty('--L',Math.ceil(p.getTotalLength())+1));
+const slides=[...document.querySelectorAll('.slide')];const N=slides.length;let cur=0;
+const stage=document.getElementById('stage'),pgi=document.getElementById('pgi');
+function fit(){const s=Math.min(innerWidth/1280,innerHeight/720);stage.style.transform=`translate(-50%,-50%) scale(${s})`}
+addEventListener('resize',fit);fit();document.getElementById('tot').textContent='/ '+N;
+function show(i,reveal){cur=Math.max(0,Math.min(N-1,i));slides.forEach((s,k)=>s.classList.toggle('active',k===cur));
+  slides[cur].querySelectorAll('.frag').forEach(f=>f.classList.toggle('on',!!reveal));
+  pgi.value=cur+1;try{history.replaceState(null,'','#'+(cur+1))}catch(e){}}
+function grp(el){const st=el.getAttribute('data-step');return st?slides[cur].querySelectorAll('[data-step="'+st+'"]'):[el]}
+function next(){const rest=[...slides[cur].querySelectorAll('.frag:not(.on)')];const st=rest.filter(e=>e.hasAttribute('data-step'));const h=st.length?st.sort((a,b)=>a.dataset.step-b.dataset.step)[0]:rest[0];if(h){grp(h).forEach(e=>e.classList.add('on'));return}if(cur<N-1)show(cur+1,false)}
+function prev(){const on=[...slides[cur].querySelectorAll('.frag.on')];const os=on.filter(e=>e.hasAttribute('data-step')).sort((a,b)=>a.dataset.step-b.dataset.step);if(on.length){grp(os.length?os[os.length-1]:on[on.length-1]).forEach(e=>e.classList.remove('on'));return}if(cur>0)show(cur-1,true)}
+document.getElementById('next').onclick=e=>{e.stopPropagation();if(cur<N-1)show(cur+1,false)};
+document.getElementById('prev').onclick=e=>{e.stopPropagation();if(cur>0)show(cur-1,true)};
+document.getElementById('go').onclick=e=>{e.stopPropagation();const v=parseInt(pgi.value,10);if(v)show(v-1,false)};
+pgi.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){const v=parseInt(pgi.value,10);if(v)show(v-1,false)}});
+document.getElementById('nav').addEventListener('click',e=>e.stopPropagation());
+addEventListener('keydown',e=>{if(['ArrowRight','PageDown',' ','Enter'].includes(e.key)){e.preventDefault();next()}else if(['ArrowLeft','PageUp','Backspace'].includes(e.key)){e.preventDefault();prev()}else if(e.key==='Home')show(0)});
+stage.addEventListener('click',e=>{const r=stage.getBoundingClientRect();if(e.clientX-r.left<r.width/3)prev();else next()});
+let navT;const navEl=document.getElementById('nav');function wake(){navEl.classList.remove('hide');clearTimeout(navT);navT=setTimeout(()=>navEl.classList.add('hide'),2500)}addEventListener('mousemove',wake);addEventListener('touchstart',wake);wake();
+ const h=parseInt((location.hash||'').slice(1),10);show(h&&h<=N?h-1:0,false);
+
+const zoom=document.getElementById('zoom'),zimg=zoom.querySelector('img');
+document.querySelectorAll('.figcard img').forEach(im=>im.addEventListener('click',e=>{e.stopPropagation();zimg.src=im.src;zimg.alt=im.alt;zoom.classList.add('on')}));
+zoom.addEventListener('click',e=>{e.stopPropagation();zoom.classList.remove('on')});
+addEventListener('keydown',e=>{if(zoom.classList.contains('on')){if(e.key==='Escape'||e.key===' '||e.key.startsWith('Arrow')){zoom.classList.remove('on');e.stopImmediatePropagation();e.preventDefault()}}},true);
+</script>
+</body>
+</html>
